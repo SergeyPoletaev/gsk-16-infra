@@ -54,7 +54,7 @@
 
     - name: Check image jenkins_server exist
       shell: docker images | grep jenkins_server
-      register: result
+      register: j_result
       ignore_errors: true
       changed_when: false
 
@@ -71,7 +71,13 @@
           -d jenkins_server
         docker stop jenkins_server
         rm -R ./gsk-16-infra/ && cd ~/
-      when: result is failed
+      when: j_result is failed
+
+    - name: Check image postgres exist
+        shell: docker images | grep postgres
+        register: p_result
+        ignore_errors: true
+        changed_when: false
 
 
 
