@@ -1,0 +1,2 @@
+swarm:3.42
+ssh-slaves:1.31.3
