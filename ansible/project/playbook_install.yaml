@@ -73,12 +73,6 @@
         rm -R ./gsk-16-infra/ && cd ~/
       when: j_result is failed
 
-    - name: Check image postgres exist
-        shell: docker images | grep postgres
-        register: p_result
-        ignore_errors: true
-        changed_when: false
-
 
 
 
