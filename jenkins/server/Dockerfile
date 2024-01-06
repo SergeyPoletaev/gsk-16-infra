@@ -1,5 +1,5 @@
 # Сборка сервера Jenkins
-FROM jenkins/jenkins:2.375-jdk11
+FROM jenkins/jenkins:2.375.4-jdk11
 COPY jenkins_plugins.txt /tmp/jenkins_plugins.txt
 RUN jenkins-plugin-cli -f /tmp/jenkins_plugins.txt
 USER root
