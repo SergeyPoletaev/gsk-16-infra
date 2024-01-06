@@ -25,6 +25,7 @@ docker start jenkins_server
 
 ```batch
 docker exec -it jenkins_server /bin/sh
+cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
 - ввести временный пароль и закончить настройку jenkins
