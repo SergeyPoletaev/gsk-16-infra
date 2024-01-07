@@ -13,22 +13,33 @@
     - name: Install git
       apt: name=git state=latest
 
-    #    - name: Add github.com to known hosts
-    #      shell: |
-    #        ssh-keyscan github.com >> ~/.ssh/known_hosts
-
     - name: Populate service facts
       ansible.builtin.service_facts:
 
-    - name: Install docker
-      shell: |
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sh get-docker.sh
-        groupadd docker
-        usermod -aG docker $USER
+    - block:
+        - name: Install Docker
+          ansible.builtin.get_url:
+            url: "https://get.docker.com"
+            dest: "/tmp/get-docker.sh"
+            mode: 'u+x,g+x'
+        - name: Run the Docker installation script
+          ansible.builtin.command: sh /tmp/get-docker.sh
+          args:
+            creates: /usr/bin/docker
+        - name: Add current user to docker group
+          ansible.builtin.user:
+            name: "{{ USER }}"
+            groups: docker
       when: ansible_facts.services["docker.service"] is not defined
 
-    - name: Install docker-compose
+    - name: Install python3-pip package
+      apt: name=python3-pip state=present
+
+    - name: Install docker python package
+      ansible.builtin.pip:
+        name: docker
+
+    - name: Download docker-compose
       shell: |
         curl -LO https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64
         chmod +x ./docker-compose-linux-x86_64
@@ -36,7 +47,7 @@
       args:
         creates: /usr/local/bin/docker-compose
 
-    - name: Install minikube
+    - name: Download minikube
       shell: |
         curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         chmod +x ./minikube
@@ -44,7 +55,7 @@
       args:
         creates: /usr/local/bin/minikube
 
-    - name: Install kubectl
+    - name: Download kubectl
       shell: |
         curl -LO https://dl.k8s.io/release/`curl -LS https://dl.k8s.io/release/stable.txt`/bin/linux/amd64/kubectl 
         chmod +x ./kubectl
@@ -52,26 +63,39 @@
       args:
         creates: /usr/local/bin/kubectl
 
-    - name: Check image jenkins_server exist
-      shell: docker images | grep jenkins_server
-      register: j_result
-      ignore_errors: true
-      changed_when: false
+    - name: Check if jenkins_server image exists
+      community.docker.docker_image_info:
+        name: jenkins_server
+      register: image_info
 
-    - name: Create docker image jenkins
-      shell: |
-        mkdir -p ./tmp
-        cd ./tmp
-        git clone https://github.com/SergeyPoletaev/gsk-16-infra.git
-        docker build -t jenkins_server ./gsk-16-infra/jenkins/server
-        docker run --name jenkins_server \
-          -p 9090:8080 -p 50000:50000 \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v /tmp:/var/jenkins_home \
-          -d jenkins_server
-        docker stop jenkins_server
-        rm -R ./gsk-16-infra/ && cd ~/
-      when: j_result is failed
+    - block:
+        - name: Clone gsk-16-infra repository
+          git:
+            repo: https://github.com/SergeyPoletaev/gsk-16-infra
+            dest: /tmp/gsk-16-infra
+        - name: Build jenkins_server image
+          community.docker.docker_image:
+            build:
+              path: /tmp/gsk-16-infra/jenkins/server
+            tag: jenkins_server
+            source: build
+        - name: Run the jenkins_server container
+          community.docker.docker_container:
+            name: jenkins_server
+            image: jenkins_server
+            ports:
+              - "9090:8080"
+              - "50000:50000"
+            volumes:
+              - "/var/run/docker.sock:/var/run/docker.sock"
+              - "/tmp:/var/jenkins_home"
+            detach: true
+        - name: Stop the jenkins_server container
+          community.docker.docker_container:
+            name: jenkins_server
+            state: stopped
+      when: image_info.images|length == 0
+
 
 
 
