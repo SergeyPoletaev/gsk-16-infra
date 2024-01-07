@@ -1,0 +1,36 @@
+---
+- name: Start the environment on the server
+  hosts: prod_servers
+  become: yes
+
+  tasks:
+    - name: Start jenkins_container
+      docker_container:
+        name: jenkins_server
+        state: started
+
+    - name: Git clone gsk-16-infra repository
+      git:
+        repo: https://github.com/SergeyPoletaev/gsk-16-infra
+        dest: /tmp/gsk-16-infra
+
+    - name: Check if Postgres container is running
+      shell: |
+        docker ps | grep postgres_container
+      register: postgres_container_status
+      ignore_errors: true
+    - debug:
+        var: postgres_container_status
+
+    - name: Run docker-compose for Postgres
+      shell: docker compose up -d
+      args:
+        chdir: /tmp/gsk-16-infra/postgres/
+      when: postgres_container_status.rc != 0
+
+
+
+
+
+
+

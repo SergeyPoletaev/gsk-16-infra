@@ -38,6 +38,7 @@
     - name: Install docker python package
       ansible.builtin.pip:
         name: docker
+        state: present
 
     - name: Download docker-compose
       shell: |
